@@ -292,3 +292,4 @@ __pycache__/
 obj/Dev/*
 *.user
 .vs/
+logs/*
