@@ -2,58 +2,83 @@ using Desharp;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using System.Web;
 using System.Web.Security;
 using System.Web.SessionState;
 
 namespace WebApp {
+    // https://docs.microsoft.com/cs-cz/dotnet/api/system.web.httpapplication?view=netframework-4.8
 	public partial class Global : System.Web.HttpApplication, IHttpHandler, IRequiresSessionState {
-		// https://docs.microsoft.com/cs-cz/dotnet/api/system.web.httpapplication?view=netframework-4.8
-		protected void Application_PostAuthorizeRequest() {
-            // to start session:
-            HttpContext.Current.SetSessionStateBehavior(SessionStateBehavior.Required);
-        }
-        public void Session_Start(object sender, EventArgs e) {
-            // Called once when session is started in first request:
+        
+
+
+
+
+        /**
+         * Global.aspx HttpApplication handlers:
+         */
+
+        // Called only once per session:
+        protected void Session_Start(object o, EventArgs e) {
             HttpContext.Current.Session.Add("RequestCounter", 0);
         }
-		protected void Application_AcquireRequestState (object sender, EventArgs e) {
-			// Called for every request:
-			if (this.Request.Path == "/") {
-				this._demoHandleHome();
+         
+        // Change rewritten url back to raw url at the request begin:
+        protected void Application_BeginRequest (object o, EventArgs e) {
+            this.Request
+                .GetType()
+                    .GetField("_url", BindingFlags.Instance | BindingFlags.NonPublic)
+                        .SetValue(this.Request, new System.Uri(
+                            this.Request.Url.Scheme + System.Uri.SchemeDelimiter +
+                            this.Request.Url.Authority + this.Request.RawUrl
+                        ));
+		}
+        // Read session data:
+		protected void Application_PostAuthorizeRequest (object o, EventArgs e) {
+            HttpContext.Current.SetSessionStateBehavior(SessionStateBehavior.Required);
+        }
+        // Handle all requests execution:
+		protected void Application_PreRequestHandlerExecute (object o, EventArgs e) {
+			if (this.Request.Url.LocalPath.IndexOf("/test-redirect") == 0) {
+				this._demoHandleTestRecorect();
 			} else {
-				this._demoRedirectAnyOtherPageToHome();
+				this._demoHandleAllRequests();
 			}
 		}
-		protected void Application_PostAcquireRequestState (object sender, EventArgs e) {
-			// Called for every request:
-			if (this.Response.StatusCode >= 300 && this.Response.StatusCode <= 400) {
-				// When request is redirected - call flush and end the request:
-				this.Response.Flush();
-				this.Response.End();
-			} else {
-				// Call `Reponse.Flush();` method (not `Response.End();`) to be able to see session panel
-				TimeSpan reqTimeSpan = DateTime.Now - HttpContext.Current.Timestamp;
-				string requestTime = reqTimeSpan.Milliseconds.ToString("0.###", new CultureInfo("en-US")) + " ms (" 
-					 + reqTimeSpan.Ticks.ToString() + " ticks)";
-				this.Response.AddHeader("X-Exec-Time", requestTime);
-				this.Response.Flush();
-			}
+		// Add execution time header after everything is done:
+		protected void Application_PostRequestHandlerExecute (object o, EventArgs e) {
+			TimeSpan reqTimeSpan = DateTime.Now - HttpContext.Current.Timestamp;
+			string requestTime = reqTimeSpan.Milliseconds.ToString("0.###", new CultureInfo("en-US")) + " ms (" 
+					+ reqTimeSpan.Ticks.ToString() + " ticks)";
+			this.Response.AddHeader("X-Exec-Time", requestTime);
 		}
-		private void _demoRedirectAnyOtherPageToHome () {
-			Debug.Dump("Redirected from: " + this.Request.Path);
+
+
+
+
+
+
+        /**
+         * Demo handler methods: 
+         */
+
+        // Handle demo redirect request:
+		private void _demoHandleTestRecorect () {
+			Debug.Dump("Redirected from: " + this.Request.Url.AbsoluteUri);
 			this.Response.Headers.Add("Location", "/");
-			this.Response.StatusCode = 302;
+		    this.Response.StatusCode = 302;
 		}
-		private void _demoHandleHome () {
+        // Handle all demo requests:
+		private void _demoHandleAllRequests () {
 			// Write some standard output:
-			this.Response.Write("Hallo ");
+			this.Response.Write("Hallo world!<br /><br />");
 
 			// Try to dump something in debug mode:
             try {
 				this._demoDumpAndLog();
 				this._demoSession();
-				this._demoCatchedException();
+				//this._demoCatchedException();
 				//this._demoUncatchedException();
             } catch (Exception ex) {
 				// Last exception is:
@@ -67,8 +92,18 @@ namespace WebApp {
 			//this._runExceptionsTests();
 
 			// Write some standard output:
-			this.Response.Write("world!");
+			this.Response.Write(@"<br /><br />Click for <a href=""/test-redirect"">demo redirection</a>.");
 		}
+
+
+
+
+
+        /**
+         * Demo dump methods: 
+         */
+        
+        // Dump some structured example data:
         private void _demoDumpAndLog() {
 			if (!Debug.Enabled()) return;
             var demoObject = new Dictionary<string, object>() {
@@ -98,10 +133,14 @@ namespace WebApp {
             Debug.Dump(demoObject);
             Debug.Log(demoObject);
         }
+
+        // Count something in session:
         private void _demoSession() {
             int requestsCount = (int)this.Session["RequestCounter"];
             this.Session["RequestCounter"] = requestsCount + 1;
         }
+        
+        // Render some catched exception:
         private void _demoCatchedException () {
             try {
                 throw new Exception("Demo catched exception text.");
@@ -110,13 +149,19 @@ namespace WebApp {
                 Debug.Log(ex);
             }
         }
+        
+        // Render some uncatched exception:
         private void _demoUncatchedException () {
 			throw new Exception("Demo uncatched exception text.");
         }
+        
+        // Run test dumps:
         private  void _runDumpingTests () {
 		    var dlTest = new Tests.DumpingAndLoging();
 		    dlTest.TestAll();
         }
+
+        // Run test exceptions rendering:
         private  void _runExceptionsTests () {
 		    var eTest = new Tests.ExceptionsRendering();
 		    eTest.TestAll();
