@@ -5,7 +5,7 @@
 
 Basic web application (`Global.asax` only) with demo dumps and tests in C#.
 
-The panels look, dump colors, exception rendering and other features and behaviour 
+The panels look, dump colors, exception rendering and other features and behaviour   
 is very simmilar to open source PHP library [**Tracy**](https://github.com/nette/tracy)
 
 **Many thanks to [Nette Foundation](https://github.com/nette)!!!**
