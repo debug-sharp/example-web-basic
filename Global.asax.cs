@@ -86,7 +86,7 @@ namespace WebApp {
 				// - always logged automatically in non-debug mode:
 				throw new Exception("Global request error.", ex);
             }
-
+			
 			// Run some test dumps:
 			//this._runDumpingTests();
 			//this._runExceptionsTests();
@@ -157,13 +157,13 @@ namespace WebApp {
         
         // Run test dumps:
         private  void _runDumpingTests () {
-		    var dlTest = new Tests.DumpingAndLoging();
+		    var dlTest = new Desharp.Tests.DumpingAndLoging();
 		    dlTest.TestAll();
         }
 
         // Run test exceptions rendering:
         private  void _runExceptionsTests () {
-		    var eTest = new Tests.ExceptionsRendering();
+		    var eTest = new Desharp.Tests.ExceptionsRendering();
 		    eTest.TestAll();
         }
     }
